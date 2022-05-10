@@ -18,10 +18,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey();
-  String firstName = "";
-  String lastName = "";
-  String bodyTemp = "";
-  var measure;
+  String title = "";
+  String description = "";
 
   Duration get loginTime => const Duration(milliseconds: 1250);
   final NetworkService _networkService = NetworkService();
@@ -47,7 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
         return SizedBox(
           height: 70,
           child: _tile(_recipes[index].title,
-              _recipes[index].description.substring(0, 80) + "..."),
+              _recipes[index].description.length < 81 ? _recipes[index].description : _recipes[index].description.substring(0, 80) + "..."),
         );
       },
       separatorBuilder: (BuildContext context, int index) => const Divider(),
@@ -62,14 +60,12 @@ class _HomeScreenState extends State<HomeScreen> {
         return SizedBox(
           height: 70,
           child: _tile(_recipes[index].title,
-              _recipes[index].description.substring(0, 80) + "..."),
+              _recipes[index].description.length < 81 ? _recipes[index].description : _recipes[index].description.substring(0, 80) + "..."),
         );
       },
       separatorBuilder: (BuildContext context, int index) => const Divider(),
     );
   }
-
-  void _addRecipe() {}
 
   void _onItemTapped(int index) {
     setState(() {
@@ -117,7 +113,7 @@ class _HomeScreenState extends State<HomeScreen> {
           children: <Widget>[
             const Align(
               alignment: Alignment.topLeft,
-              child: Text("Добавьте рецепт",
+              child: Text("Добавьте новый рецепт",
                   style: TextStyle(
                     fontSize: 24,
                   )),
@@ -141,13 +137,12 @@ class _HomeScreenState extends State<HomeScreen> {
                         border: OutlineInputBorder()),
                     onFieldSubmitted: (value) {
                       setState(() {
-                        firstName = value;
-                        // firstNameList.add(firstName);
+                        title = value;
                       });
                     },
                     onChanged: (value) {
                       setState(() {
-                        firstName = value;
+                        title = value;
                       });
                     },
                     validator: (value) {
@@ -175,13 +170,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                     onFieldSubmitted: (value) {
                       setState(() {
-                        lastName = value;
-                        // lastNameList.add(lastName);
+                        description = value;
                       });
                     },
                     onChanged: (value) {
                       setState(() {
-                        lastName = value;
+                        description = value;
                       });
                     },
                   ),
@@ -199,15 +193,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     onPressed: () {
                       if (_formKey.currentState!.validate()) {
                         Future.value(_recipesNetworkService.addRecipe(Addrecipe(
-                                title: "ttttt", description: "fdsfsdf")))
+                                title: title, description: description)))
                             .then(
                           (x) {
-                            if (x) {
                               Navigator.pop(context);
-                            }
                           },
                         );
-
                         //_submit();
                       }
                     },
@@ -233,10 +224,10 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: () {
               Future.value(_networkService.logout()).then(
                 (x) {
-                  Navigator.of(context)
-                      .pushReplacementNamed(LoginScreen.routeName);
                 },
               );
+              Navigator.of(context)
+                  .pushReplacementNamed(LoginScreen.routeName);
             },
           ),
         ],

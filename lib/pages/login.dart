@@ -7,13 +7,21 @@ import 'package:flutter_login/flutter_login.dart';
 
 import 'home.dart';
 
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends StatefulWidget {
   static const routeName = '/auth';
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
   Duration get loginTime => const Duration(milliseconds: 1250);
   final NetworkService _networkService = NetworkService();
 
   Future<String?> _authUser(LoginData data) {
     debugPrint('Name: ${data.name}, Password: ${data.password}');
+    setState(() {
+      _buildBeginScreen(context);
+    });
     return Future.value(_networkService.login(data.name, data.password)).then(
       (x) {
         if (!x) {
@@ -26,6 +34,9 @@ class LoginScreen extends StatelessWidget {
 
   Future<String?> _signupUser(SignupData data) {
     debugPrint('Signup Name: ${data.name}, Password: ${data.password}');
+    setState(() {
+      _buildBeginScreen(context);
+    });
     return Future.value(_networkService.register(data.name!, data.password!))
         .then(
       (x) {
@@ -63,13 +74,32 @@ class LoginScreen extends StatelessWidget {
       builder: (context, snapshot) {
         if (snapshot.data != null) {
           bool _isConnected = snapshot.data!;
-          return _isConnected ? _buildLogin(context) : const Text("No net");
+          return _isConnected ? _buildLogin(context) : _buildWithoutNet(context);
         } else {
           return const Center(
             child: CircularProgressIndicator(),
           );
         }
       },
+    );
+  }
+  
+  Widget _buildWithoutNet(BuildContext context){
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("Вы сейчас не в сети"),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Переподключиться',
+            onPressed: () {
+              setState(() {
+                _buildBeginScreen(context);
+              });
+            },
+          ),
+        ],
+      ),
     );
   }
 

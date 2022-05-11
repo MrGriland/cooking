@@ -1,8 +1,11 @@
+import 'package:cooking/db/dbcontext.dart';
 import 'package:cooking/models/addrecipe.dart';
+import 'package:cooking/models/container.dart';
 import 'package:cooking/models/recipe.dart';
 import 'package:cooking/network/auth.dart';
 import 'package:cooking/pages/login.dart';
 import 'package:flutter/material.dart';
+import 'package:sqflite/sqflite.dart';
 import 'package:flutter_login/flutter_login.dart';
 
 import '../models/viewrecipe.dart';
@@ -20,32 +23,95 @@ class _HomeScreenState extends State<HomeScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey();
   String title = "";
   String description = "";
+  DBRecipeProvider _dbRecipeProvider = DBRecipeProvider();
 
   Duration get loginTime => const Duration(milliseconds: 1250);
   final NetworkService _networkService = NetworkService();
-  RecipesNetworkService _recipesNetworkService = RecipesNetworkService();
+  final RecipesNetworkService _recipesNetworkService = RecipesNetworkService();
   int _selectedIndex = 0;
 
-  ListTile _tile(String title, String subtitle) {
+  void like(int id) {
+    Future.value(_recipesNetworkService.addFavorite(Idcontainer(id: id))).then(
+      (x) {
+        if (x) {
+          final snackBar = SnackBar(
+            content: const Text('Добавлено в избранные'),
+            action: SnackBarAction(
+              label: 'Отмена',
+              onPressed: () {
+                unlike(id);
+                setState(() {});
+              },
+            ),
+          );
+          ScaffoldMessenger.of(context).showSnackBar(snackBar);
+        }
+      },
+    );
+  }
+
+  void unlike(int id) {
+    Future.value(_recipesNetworkService.removeFavorite(Idcontainer(id: id)))
+        .then(
+      (x) {
+        if (x) {
+          final snackBar = SnackBar(
+            content: const Text('Убрано из избранных'),
+            action: SnackBarAction(
+              label: 'Отмена',
+              onPressed: () {
+                like(id);
+                setState(() {});
+              },
+            ),
+          );
+          ScaffoldMessenger.of(context).showSnackBar(snackBar);
+        }
+      },
+    );
+  }
+
+  ListTile _maintile(DBRecipe recipe) {
     return ListTile(
-      title: Text(title,
+      onLongPress: () {
+        like(recipe.id);
+        setState(() {});
+      },
+      title: Text(recipe.title,
           style: const TextStyle(
             fontWeight: FontWeight.w500,
             fontSize: 20,
           )),
-      subtitle: Text(subtitle),
+      subtitle: Text(recipe.description.length < 81
+          ? recipe.description
+          : recipe.description),
     );
   }
 
-  Widget buildListWidget(List<Recipe> _recipes) {
+  ListTile _favoritetile(Viewrecipe recipe) {
+    return ListTile(
+      onLongPress: () {
+        unlike(recipe.id);
+        setState(() {});
+      },
+      title: Text(recipe.title,
+          style: const TextStyle(
+            fontWeight: FontWeight.w500,
+            fontSize: 20,
+          )),
+      subtitle: Text(recipe.description.length < 81
+          ? recipe.description
+          : recipe.description),
+    );
+  }
+
+  Widget buildListWidget(List<DBRecipe> _recipes) {
     return ListView.separated(
       padding: const EdgeInsets.all(8),
       itemCount: _recipes.length,
       itemBuilder: (BuildContext context, int index) {
         return SizedBox(
-          height: 70,
-          child: _tile(_recipes[index].title,
-              _recipes[index].description.length < 81 ? _recipes[index].description : _recipes[index].description.substring(0, 80) + "..."),
+          child: _maintile(_recipes[index]),
         );
       },
       separatorBuilder: (BuildContext context, int index) => const Divider(),
@@ -58,9 +124,7 @@ class _HomeScreenState extends State<HomeScreen> {
       itemCount: _recipes.length,
       itemBuilder: (BuildContext context, int index) {
         return SizedBox(
-          height: 70,
-          child: _tile(_recipes[index].title,
-              _recipes[index].description.length < 81 ? _recipes[index].description : _recipes[index].description.substring(0, 80) + "..."),
+          child: _favoritetile(_recipes[index]),
         );
       },
       separatorBuilder: (BuildContext context, int index) => const Divider(),
@@ -73,13 +137,12 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  FutureBuilder<List<Recipe>> _buildCurrentList(BuildContext context) {
-    return FutureBuilder<List<Recipe>>(
-      future: _recipesNetworkService.getAllRecipes(),
+  FutureBuilder<List<DBRecipe>> _buildCurrentList(BuildContext context) {
+    return FutureBuilder<List<DBRecipe>>(
+      future: _recipesNetworkService.sync(),
       builder: (context, snapshot) {
         if (snapshot.data != null) {
-          List<Recipe> _recipes = snapshot.data!;
-          return buildListWidget(_recipes);
+          return buildListWidget(snapshot.data!);
         } else {
           return const Center(
             child: CircularProgressIndicator(),
@@ -89,13 +152,17 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Future<List<DBRecipe>> dbOperations() async {
+    await _dbRecipeProvider.open(await _dbRecipeProvider.getdbpath());
+    return _dbRecipeProvider.fetchFromDB();
+  }
+
   FutureBuilder<List<Viewrecipe>> _buildFavoriteList(BuildContext context) {
     return FutureBuilder<List<Viewrecipe>>(
       future: _recipesNetworkService.getFavorite(),
       builder: (context, snapshot) {
         if (snapshot.data != null) {
-          List<Viewrecipe> _recipes = snapshot.data!;
-          return buildFavoriteListWidget(_recipes);
+          return buildFavoriteListWidget(snapshot.data!);
         } else {
           return const Center(
             child: CircularProgressIndicator(),
@@ -182,9 +249,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(
                     height: 20,
                   ),
-                  const SizedBox(
-                    height: 20,
-                  ),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       primary: const Color.fromRGBO(70, 30, 100, 0.8),
@@ -196,7 +260,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 title: title, description: description)))
                             .then(
                           (x) {
-                              Navigator.pop(context);
+                            Navigator.pop(context);
                           },
                         );
                         //_submit();
@@ -223,11 +287,9 @@ class _HomeScreenState extends State<HomeScreen> {
             tooltip: 'Выход',
             onPressed: () {
               Future.value(_networkService.logout()).then(
-                (x) {
-                },
+                (x) {},
               );
-              Navigator.of(context)
-                  .pushReplacementNamed(LoginScreen.routeName);
+              Navigator.of(context).pushReplacementNamed(LoginScreen.routeName);
             },
           ),
         ],
@@ -244,7 +306,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           );
         },
-        backgroundColor: const Color.fromRGBO(70, 30, 100, 0.8),
         child: const Icon(Icons.add),
       ),
       bottomNavigationBar: BottomNavigationBar(

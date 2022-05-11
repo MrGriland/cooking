@@ -5,6 +5,7 @@ import 'package:cooking/network/auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_login/flutter_login.dart';
 
+import '../db/dbcontext.dart';
 import 'home.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -16,6 +17,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   Duration get loginTime => const Duration(milliseconds: 1250);
   final NetworkService _networkService = NetworkService();
+  DBRecipeProvider _dbRecipeProvider = DBRecipeProvider();
 
   Future<String?> _authUser(LoginData data) {
     debugPrint('Name: ${data.name}, Password: ${data.password}');
@@ -83,11 +85,60 @@ class _LoginScreenState extends State<LoginScreen> {
       },
     );
   }
-  
+
+  Future<List<DBRecipe>> dbOperations() async {
+    await _dbRecipeProvider.open(await _dbRecipeProvider.getdbpath());
+    return _dbRecipeProvider.fetchFromDB();
+  }
+
+  FutureBuilder<List<DBRecipe>> _buildOfflineList(BuildContext context) {
+
+    return FutureBuilder<List<DBRecipe>>(
+      future: dbOperations(),
+      builder: (context, snapshot) {
+        if (snapshot.data != null) {
+          return buildListWidget(snapshot.data!);
+        } else {
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
+        }
+      },
+    );
+  }
+
+  Widget buildListWidget(List<DBRecipe> _recipes) {
+    return ListView.separated(
+      padding: const EdgeInsets.all(8),
+      itemCount: _recipes.length,
+      itemBuilder: (BuildContext context, int index) {
+        return SizedBox(
+          child: _maintile(
+              _recipes[index]
+          ),
+        );
+      },
+      separatorBuilder: (BuildContext context, int index) => const Divider(),
+    );
+  }
+
+  ListTile _maintile(DBRecipe recipe) {
+    return ListTile(
+      title: Text(recipe.title,
+          style: const TextStyle(
+            fontWeight: FontWeight.w500,
+            fontSize: 20,
+          )),
+      subtitle: Text(recipe.description.length < 81
+          ? recipe.description
+          : recipe.description),
+    );
+  }
+
   Widget _buildWithoutNet(BuildContext context){
     return Scaffold(
       appBar: AppBar(
-        title: Text("Вы сейчас не в сети"),
+        title: const Text("Вы сейчас не в сети"),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -100,6 +151,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ],
       ),
+      body: _buildOfflineList(context),
     );
   }
 

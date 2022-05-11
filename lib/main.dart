@@ -67,14 +67,14 @@ class _MyHomePageState extends State<MyHomePage> {
       title: 'Login Demo',
       theme: ThemeData(
         textSelectionTheme:
-        const TextSelectionThemeData(cursorColor: Colors.orange),
+        const TextSelectionThemeData(cursorColor: Colors.white38),
         // fontFamily: 'SourceSansPro',
         textTheme: TextTheme(
           headline3: const TextStyle(
             fontFamily: 'OpenSans',
             fontSize: 45.0,
             // fontWeight: FontWeight.w400,
-            color: Colors.orange,
+            color: Colors.white38,
           ),
           button: const TextStyle(
             // OpenSans is similar to NotoSans but the uppercases look a bit better IMO
@@ -97,8 +97,8 @@ class _MyHomePageState extends State<MyHomePage> {
           subtitle2: const TextStyle(fontFamily: 'NotoSans'),
           overline: const TextStyle(fontFamily: 'NotoSans'),
         ),
-        colorScheme: ColorScheme.fromSwatch(primarySwatch: Colors.deepPurple)
-            .copyWith(secondary: Colors.orange),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color.fromRGBO(70, 30, 100, 0.8))
+            .copyWith(secondary: const Color.fromRGBO(70, 30, 100, 0.8)),
       ),
       navigatorObservers: [TransitionRouteObserver()],
       initialRoute: LoginScreen.routeName,
